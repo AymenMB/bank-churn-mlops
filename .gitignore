@@ -1,0 +1,20 @@
+__pycache__/
+*.pyc
+venv/
+.env
+mlruns/
+*.log
+.DS_Store
+.vscode/
+confusion_matrix.png
+feature_importance.png
+# Secrets (NEVER commit)
+*.secret
+*.key
+*.pem
+credentials*.json
+resultat.txt
+azure-credentials.json
+azure_url.txt
+# MLflow artifacts
+mlartifacts/
