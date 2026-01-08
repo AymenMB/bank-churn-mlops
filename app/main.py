@@ -1,6 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
+from functools import lru_cache
+import hashlib
+import json
 import joblib
 import numpy as np
 import logging
@@ -48,6 +51,43 @@ MODEL_PATH = os.getenv("MODEL_PATH", "model/churn_model.pkl")
 model = None
 
 # ============================================================
+# CACHING UTILITIES (Module 7 Optimization)
+# ============================================================
+
+def hash_features(features_dict: dict) -> str:
+    """Create a unique hash for the features for cache lookup"""
+    return hashlib.md5(
+        json.dumps(features_dict, sort_keys=True).encode()
+    ).hexdigest()
+
+@lru_cache(maxsize=1000)
+def predict_cached(features_hash: str, features_json: str):
+    """Cached prediction function - stores last 1000 predictions"""
+    features_dict = json.loads(features_json)
+    input_data = np.array([[
+        features_dict["CreditScore"],
+        features_dict["Age"],
+        features_dict["Tenure"],
+        features_dict["Balance"],
+        features_dict["NumOfProducts"],
+        features_dict["HasCrCard"],
+        features_dict["IsActiveMember"],
+        features_dict["EstimatedSalary"],
+        features_dict["Geography_Germany"],
+        features_dict["Geography_Spain"]
+    ]])
+    
+    proba = float(model.predict_proba(input_data)[0][1])
+    prediction = int(proba > 0.5)
+    risk = "Low" if proba < 0.3 else "Medium" if proba < 0.7 else "High"
+    
+    return {
+        "churn_probability": round(proba, 4),
+        "prediction": prediction,
+        "risk_level": risk
+    }
+
+# ============================================================
 # STARTUP EVENT
 # ============================================================
 
@@ -90,7 +130,7 @@ def health():
 @app.post("/predict", response_model=PredictionResponse, tags=["Prediction"])
 def predict(features: CustomerFeatures):
     """
-    Prediction de churn pour un seul client
+    Prediction de churn pour un seul client (avec cache)
     
     Returns:
         PredictionResponse: Probabilite de churn, prediction binaire, et niveau de risque
@@ -99,34 +139,17 @@ def predict(features: CustomerFeatures):
         raise HTTPException(status_code=503, detail="Model unavailable")
 
     try:
-        # Preparer les donnees d'entree
-        input_data = np.array([[  
-            features.CreditScore,
-            features.Age,
-            features.Tenure,
-            features.Balance,
-            features.NumOfProducts,
-            features.HasCrCard,
-            features.IsActiveMember,
-            features.EstimatedSalary,
-            features.Geography_Germany,
-            features.Geography_Spain
-        ]])
-
-        # Prediction
-        proba = float(model.predict_proba(input_data)[0][1])
-        prediction = int(proba > 0.5)
-
-        # Niveau de risque
-        risk = "Low" if proba < 0.3 else "Medium" if proba < 0.7 else "High"
-
-        logger.info(f"Prediction made: probability={proba:.4f}, risk={risk}")
-
-        return {
-            "churn_probability": round(proba, 4),
-            "prediction": prediction,
-            "risk_level": risk
-        }
+        # Convert features to dict for caching
+        features_dict = features.model_dump()
+        features_hash = hash_features(features_dict)
+        features_json = json.dumps(features_dict)
+        
+        # Use cached prediction
+        result = predict_cached(features_hash, features_json)
+        
+        logger.info(f"Prediction - Hash: {features_hash[:8]}, probability={result['churn_probability']}")
+        
+        return result
 
     except Exception as e:
         logger.error(f"Prediction error: {str(e)}")
