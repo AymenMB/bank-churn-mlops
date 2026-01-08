@@ -29,3 +29,7 @@ seaborn==0.13.0
 
 # Azure Application Insights
 opencensus-ext-azure==1.1.9
+
+# Streamlit Frontend
+streamlit==1.29.0
+plotly==5.18.0

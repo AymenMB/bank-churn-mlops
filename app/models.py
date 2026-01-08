@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Literal
+from typing import Literal, List, Optional
 
 class CustomerFeatures(BaseModel):
     """Schema pour les features d'un client"""
@@ -40,3 +40,40 @@ class HealthResponse(BaseModel):
     """Schema pour le health check"""
     status: str = Field(..., description="Statut de l'API")
     model_loaded: bool = Field(..., description="Le modele est-il charge?")
+
+
+class DriftCheckRequest(BaseModel):
+    """Schema pour la demande de detection de drift"""
+    samples: List[CustomerFeatures] = Field(
+        ..., 
+        min_length=10,
+        description="Liste des echantillons de production (minimum 10)"
+    )
+    threshold: float = Field(
+        default=0.05, 
+        ge=0.01, 
+        le=0.5,
+        description="Seuil de p-value pour detecter le drift"
+    )
+    
+    class Config:
+        json_schema_extra = {
+            "example": {
+                "samples": [
+                    {
+                        "CreditScore": 650,
+                        "Age": 35,
+                        "Tenure": 5,
+                        "Balance": 50000.0,
+                        "NumOfProducts": 2,
+                        "HasCrCard": 1,
+                        "IsActiveMember": 1,
+                        "EstimatedSalary": 75000.0,
+                        "Geography_Germany": 0,
+                        "Geography_Spain": 1
+                    }
+                ],
+                "threshold": 0.05
+            }
+        }
+

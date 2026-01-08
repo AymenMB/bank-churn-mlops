@@ -9,7 +9,7 @@ import numpy as np
 import logging
 import os
 
-from app.models import CustomerFeatures, PredictionResponse, HealthResponse
+from app.models import CustomerFeatures, PredictionResponse, HealthResponse, DriftCheckRequest
 from app.drift_detect import detect_drift
 
 # ============================================================
@@ -209,21 +209,25 @@ def predict_batch(features_list: List[CustomerFeatures]):
 # ============================================================
 
 @app.post("/drift/check", tags=["Monitoring"])
-def check_drift(threshold: float = 0.05):
+def check_drift(request: DriftCheckRequest):
     """
-    Verifie le data drift entre les donnees de reference et de production
+    Verifie le data drift entre les donnees de reference et de production.
+    Accepte les echantillons de production dans le corps de la requete.
     
     Args:
-        threshold: Seuil de p-value pour detecter le drift (defaut: 0.05)
+        request: DriftCheckRequest contenant les samples et le threshold
     
     Returns:
         dict: Resultats du test de drift
     """
     try:
+        # Convert samples to list of dicts
+        production_data = [sample.model_dump() for sample in request.samples]
+        
         results = detect_drift(
             reference_file="data/bank_churn.csv",
-            production_file="data/production_data.csv",
-            threshold=threshold
+            production_data=production_data,
+            threshold=request.threshold
         )
 
         drifted_features = [
@@ -231,10 +235,11 @@ def check_drift(threshold: float = 0.05):
             if result["drift_detected"]
         ]
 
-        logger.warning(f"Drift detection: {len(drifted_features)} features drifted")
+        logger.info(f"Drift detection: analyzed {len(request.samples)} samples, {len(drifted_features)} features drifted")
 
         return {
             "status": "success",
+            "samples_analyzed": len(request.samples),
             "features_analyzed": len(results),
             "features_drifted": len(drifted_features),
             "drifted_features": drifted_features,
@@ -242,6 +247,7 @@ def check_drift(threshold: float = 0.05):
         }
 
     except FileNotFoundError as e:
+        logger.error(f"Reference file not found: {str(e)}")
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
         logger.error(f"Drift check error: {str(e)}")
