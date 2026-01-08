@@ -22,3 +22,6 @@ mlartifacts/
 data/production_data.csv
 
 previous_steps.md
+
+# Workshop guide (contains sensitive instructions)
+Workshop*.md
