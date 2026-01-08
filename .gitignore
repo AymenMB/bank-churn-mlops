@@ -20,3 +20,5 @@ azure_url.txt
 mlartifacts/
 # Generated production data (can be regenerated)
 data/production_data.csv
+
+previous_steps.md
