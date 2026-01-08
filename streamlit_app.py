@@ -1090,17 +1090,35 @@ elif page == "📡 Dashboard":
         st.info("**Note:** Drift detection requires reference data on the server. The Azure deployment may not have the training data file included.")
         
         if st.button("🔍 Run Drift Check", type="primary"):
-            sample = [{"CreditScore": 650, "Age": 35, "Tenure": 5, "Balance": 50000.0, "NumOfProducts": 2, "HasCrCard": 1, "IsActiveMember": 1, "EstimatedSalary": 75000.0, "Geography_Germany": 0, "Geography_Spain": 1}]
+            # Generate 15 sample customers for drift detection (minimum 10 required)
+            import random
+            samples = []
+            for i in range(15):
+                samples.append({
+                    "CreditScore": random.randint(350, 800),
+                    "Age": random.randint(20, 70),
+                    "Tenure": random.randint(0, 10),
+                    "Balance": round(random.uniform(0, 200000), 2),
+                    "NumOfProducts": random.randint(1, 4),
+                    "HasCrCard": random.randint(0, 1),
+                    "IsActiveMember": random.randint(0, 1),
+                    "EstimatedSalary": round(random.uniform(20000, 150000), 2),
+                    "Geography_Germany": 1 if random.random() < 0.25 else 0,
+                    "Geography_Spain": 1 if random.random() < 0.25 else 0
+                })
             
-            with st.spinner("Checking..."):
-                ok, res = check_drift(sample)
+            with st.spinner("Analyzing drift across 15 sample customers..."):
+                ok, res = check_drift(samples)
             
             if ok:
-                if res.get('drift_detected', False):
-                    st.warning("⚠️ Drift detected — consider retraining")
+                drifted = res.get('features_drifted', 0)
+                if drifted > 0:
+                    st.warning(f"⚠️ Drift detected in {drifted} feature(s) — consider retraining")
                 else:
-                    st.success("✅ No drift detected")
-                with st.expander("Details"):
+                    st.success("✅ No significant drift detected")
+                st.markdown(f"**Samples analyzed:** {res.get('samples_analyzed', 'N/A')}")
+                st.markdown(f"**Features analyzed:** {res.get('features_analyzed', 'N/A')}")
+                with st.expander("Detailed Results"):
                     st.json(res)
             else:
                 st.warning("⚠️ Drift check unavailable (reference data not deployed to Azure)")

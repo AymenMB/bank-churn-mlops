@@ -44,9 +44,9 @@ def detect_drift_from_dataframes(
             statistic, p_value = stats.ks_2samp(ref_data, prod_data)
             
             results[column] = {
-                "drift_detected": p_value < threshold,
-                "p_value": round(p_value, 6),
-                "statistic": round(statistic, 6),
+                "drift_detected": bool(p_value < threshold),
+                "p_value": float(round(p_value, 6)),
+                "statistic": float(round(statistic, 6)),
                 "type": "continuous"
             }
         else:
@@ -66,9 +66,9 @@ def detect_drift_from_dataframes(
             statistic, p_value = stats.chisquare(prod_aligned, ref_aligned)
             
             results[column] = {
-                "drift_detected": p_value < threshold,
-                "p_value": round(p_value, 6),
-                "statistic": round(statistic, 6),
+                "drift_detected": bool(p_value < threshold),
+                "p_value": float(round(p_value, 6)),
+                "statistic": float(round(statistic, 6)),
                 "type": "categorical"
             }
     
