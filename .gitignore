@@ -18,3 +18,5 @@ azure-credentials.json
 azure_url.txt
 # MLflow artifacts
 mlartifacts/
+# Generated production data (can be regenerated)
+data/production_data.csv

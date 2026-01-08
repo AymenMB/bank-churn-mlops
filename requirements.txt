@@ -29,3 +29,4 @@ seaborn==0.13.0
 
 # Azure Application Insights
 opencensus-ext-azure==1.1.9
+opencensus-ext-requests==0.12.1
